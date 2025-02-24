@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>Archive</title>
+		<style>
+@keyframes yanardoner-gry { 0% {background-color: #555;} 50% {background-color: #556;} 100% {background-color: #555;} }
+@keyframes yanardoner-red { 0% {background-color: #940;} 50% {background-color: #960;} 100% {background-color: #940;} }
+body { color: #333; background-color: #ddd; text-align: center; transition-duration: 2s; }
+body.darkmode { color: #ccc; background-color: #222; }
+.bar-text { background-color: #777; border: solid 5px #889; padding: 10px; margin: 10px; font-size: 20px; display: inline }
+button { background-color: #dfd; border: none; padding: 10px; margin: 10px; border-radius: 10px; font-size: 20px; transition-duration: 0.5s; }
+button:hover { background-color: #ddf; } button:active { background-color: #f0f; }
+.btn-red { background-color: #f00; } .btn-ylw { background-color: #ff0; } .btn-grn { background-color: #0f0; }
+#top-bar { animation: yanardoner-gry 2s infinite; position: sticky; top: 0px; z-index: 1000; display:flex; }
+#select-bar { animation: yanardoner-red 2s infinite; display: none; position: sticky; top: 60px; z-index: 1000; }
+td.selected { background-color: #ff0; }
+input { font-size: 20px; height: 35px; margin: auto; }
+table { width: 100%; }
+		</style>
+	</head>
+	<body>
+		<div id="top-bar">
+			<div id="item-count" class="bar-text" >0 Items</div>
+			<button id="refetch-thmdb-btn"  onclick="refetch_thmdb()">Re-fetch thmdb</button>
+			<button id="reparse-thmdb-btn"  onclick="reparse_thmdb()">Re-parse thmdb</button>
+			<button id="reload-config-btn"  onclick="reload_config()">Reload Item Table</button>
+			<button id="ch-order-mode-btn"  onclick="ch_order_modf();return false;" oncontextmenu="ch_order_modr();return false;">Forward Name Ordering</button>
+			<button id="ch-theme-btn"       onclick="ch_theme();">Light Theme</button>
+			<button id="ch-table-width-btn" onclick="config.tablewidth++;ch_table_width();return false;" oncontextmenu="config.tablewidth--;ch_table_width();return false;">Table Width: 12</button>
+			<button id="ch-disp-mode-btn"   onclick="ch_disp_mode()">Display All</button>
+			<button id="item-sel-btn"       onclick="select_mode()">Item Select Mode</button>
+			<input id="tag-search" placeholder="search"></input>
+		</div>
+		<div id="select-bar">
+			<input  id="item-sel-f-pref" value="bash archive-manager3.sh -G"></input>
+			<div class="bar-text" >(itemname)</div>
+			<input  id="item-sel-f-suff" placeholder="write tag here"></input>
+			<button id="copy-fitems-btn" onclick="copy_fitems()">Copy Formatted Items</button>
+			<button id="clear-items-btn" onclick="clr_item_sel()">Clear Selection</button>
+		</div>
+
+		<script>
+			var config={reverseordering:false,ordering:"name",darktheme:false,tablewidth:12,display:"all",selectmode:false,tagsearch:""};
+			var archivetype=""; // Image, Video
+			var itemextension=""; // png, mp4
+			var tardata=null;
+			var selecteditems= new Set();
+			var thms=null;
+
+			async function fetch_thmdb() {
+				const response = await fetch('thm.tar.zst');
+				const compressedData = new Uint8Array(await response.arrayBuffer());
+				tardata = fzstd.decompress(compressedData);
+			}
+			function parse_thmdb() {
+				thms = [];
+				let offset = 0;
+				let longFileName = null;
+				while (offset < tardata.length) {
+					const header = new TextDecoder().decode(tardata.slice(offset, offset + 512));
+					const name = header.slice(0, 100).replace(/\0.*$/, '');
+					const prefix = header.slice(345, 500).replace(/\0.*$/, '');
+					const typeFlag = header.charCodeAt(156);
+					const size = parseInt(header.slice(124, 136), 8) || 0;
+					const time = parseInt(header.slice(136, 148), 8);
+					if (!name && !prefix) break;
+					if (typeFlag === 76 /* 'L' */) {
+						const longNameEnd = offset + 512 + size;
+						longFileName = new TextDecoder().decode(tardata.slice(offset + 512, longNameEnd)).replace(/\0.*$/, '');
+						offset = longNameEnd + (512 - (size % 512 || 512));
+						continue;
+					}
+					const fullName = longFileName || name;
+					longFileName = null;
+					const contentStart = offset + 512;
+					const contentEnd = contentStart + size;
+					const content = tardata.slice(contentStart, contentEnd);
+					if (fullName !== "thm/") thms.push({name:fullName.replace(/^thm\//,"").replace(/\.jpg$/,""), time, image:URL.createObjectURL(new Blob([content], { type: 'image/jpeg' })) });
+					offset = contentEnd + (512 - (size % 512 || 512));
+				}
+			}
+
+			function handle_thms_order() {
+				if      (config.ordering == "name") { thms.sort((a, b) => a.name.localeCompare(b.name)); }
+				else if (config.ordering == "time") { thms.sort((a, b) => a.time - b.time); }
+				if      (config.reverseordering) { thms.reverse(); }
+			}
+
+			function load_thms() {
+				let oldtable=document.getElementById("item-table");
+				if (oldtable !== null ) { oldtable.remove(); }
+				const table = document.createElement('table');
+				table.id = "item-table";
+				let row = table.insertRow();
+				let i=0;
+				if (config.display=="untagged") {
+					thmsloop: for (const file of thms) {
+						if (file.name.length > 65) { continue thmsloop; }
+						if (i % config.tablewidth === 0 && i !== 0) { row = table.insertRow(); }
+						const cell = row.insertCell();
+						const link = document.createElement('a');
+						link.href = "sto/"+file.name+"."+itemextension;
+						const img = document.createElement('img');
+						img.src = file.image;
+						link.appendChild(img);
+						cell.appendChild(link);
+						i++;
+					}
+				}
+				else if (config.display=="tagged") {
+					thmsloop: for (const file of thms) {
+						if (file.name.length <= 65) { continue thmsloop; }
+						if (!file.name.includes(config.tagsearch)) { continue thmsloop; }
+						if (i % config.tablewidth === 0 && i !== 0) { row = table.insertRow(); }
+						const cell = row.insertCell();
+						const link = document.createElement('a');
+						link.href = "sto/"+file.name+"."+itemextension;
+						const img = document.createElement('img');
+						img.src = file.image;
+						link.appendChild(img);
+						cell.appendChild(link);
+						const tagDiv = document.createElement('div');
+						tagDiv.textContent = file.name.slice(65).replaceAll("-"," ");
+						cell.appendChild(tagDiv);
+						i++;
+					}
+				}
+				else {
+					thmsloop: for (const file of thms) {
+						for (const tag of config.tagsearch) { if (!file.name.includes(tag)) { continue thmsloop; } }
+						if (!file.name.includes(config.tagsearch)) { continue thmsloop; }
+						if (i % config.tablewidth === 0 && i !== 0) { row = table.insertRow(); }
+						const cell = row.insertCell();
+						const link = document.createElement('a');
+						link.href = "sto/"+file.name+"."+itemextension;
+						const img = document.createElement('img');
+						img.src = file.image;
+						link.appendChild(img);
+						cell.appendChild(link);
+						if (file.name.length > 65) {
+							const tagDiv = document.createElement('div');
+							tagDiv.textContent = file.name.slice(65).replaceAll("-"," ");
+							cell.appendChild(tagDiv);
+						}
+						i++;
+					}
+				}
+				document.body.appendChild(table);
+				document.getElementById("item-count").textContent=i+" Items";
+			}
+			async function main() {
+				let url=window.location.href;
+				let isimg=url.includes("img");
+				let isvid=url.includes("vid");
+				if (isimg && !isvid) {
+					itemextension="png";
+					archivetype="Image";
+				}
+				else if (!isimg && isvid) {
+					itemextension="mp4";
+					archivetype="Video";
+				}
+				else {
+					itemextension = prompt("Counldnt get archive type (img/vid) from URL, what is the item extension (png/mp4)");
+					itemextension.replace(".","");
+				}
+				await fetch_thmdb().catch(console.error);
+				parse_thmdb();
+				handle_thms_order();
+				load_thms();
+			}
+		</script>
+		<script>
+			function refetch_thmdb() {
+				const b=document.getElementById('refetch-thmdb-btn');
+				b.classList.add('btn-ylw');
+				fetch_thmdb().then(
+					function(value) { b.classList.remove('btn-ylw'); b.classList.add('btn-grn');},
+					function(error) { b.classList.remove('btn-ylw'); b.classList.add('btn-red');console.error(error);})
+				setTimeout(() => { b.classList.remove('btn-grn','btn-red'); }, 1000);
+
+			}
+			function reparse_thmdb() {
+				const b=document.getElementById('reparse-thmdb-btn');
+				b.classList.add('btn-ylw');
+				try          { parse_thmdb();        b.classList.remove('btn-ylw'); b.classList.add('btn-grn');}
+				catch(error) { console.error(error); b.classList.remove('btn-ylw'); b.classList.add('btn-red');} 
+				setTimeout(() => { b.classList.remove('btn-grn','btn-red'); }, 1000);
+			}
+
+			function reload_config() {
+				const b=document.getElementById('reload-config-btn');
+				config.tagsearch=document.getElementById("tag-search").value;
+				handle_thms_order(); load_thms();
+				b.classList.remove('btn-ylw'); b.classList.add('btn-grn'); setTimeout(() => { b.classList.remove('btn-grn'); }, 1000);
+			}
+
+			function ch_order_modf() {
+				document.getElementById('reload-config-btn').classList.add('btn-ylw');
+				const b=document.getElementById('ch-order-mode-btn');
+				config.reverseordering=false;
+				if (config.ordering=='time') { config.ordering='name'; b.textContent='Forward Name Ordering'; }
+				else                         { config.ordering='time'; b.textContent='Forward Time Ordering'; }
+			}
+
+			function ch_order_modr() {
+				document.getElementById('reload-config-btn').classList.add('btn-ylw');
+				const b=document.getElementById('ch-order-mode-btn');
+				config.reverseordering=true;
+				if (config.ordering=='time') { config.ordering='name'; b.textContent='Reverse Name Ordering'; }
+				else                         { config.ordering='time'; b.textContent='Reverse Time Ordering'; }
+			}
+
+			function ch_theme() {
+				const b=document.getElementById('ch-theme-btn');
+				document.body.classList.toggle('darkmode');
+				const div=document.getElementsByTagName('div')[0];
+				if (config.darktheme) { config.darktheme=false;b.textContent='Light Theme'; }
+				else                  { config.darktheme=true; b.textContent='Dark Theme' ; }
+			}
+
+			function ch_table_width() {
+				document.getElementById('reload-config-btn').classList.add('btn-ylw');
+				document.getElementById('ch-table-width-btn').textContent='Table Width: '+config.tablewidth;
+			}
+
+			function ch_disp_mode() {
+				document.getElementById('reload-config-btn').classList.add('btn-ylw');
+				const b=document.getElementById('ch-disp-mode-btn');
+				if      (config.display=='untagged') { config.display='all';     b.textContent='Display All'; }
+				else if (config.display=='tagged')   { config.display='untagged';b.textContent='Display Untagged'; }
+				else                                 { config.display='tagged';  b.textContent='Display Tagged'; }
+			}
+
+			function copy_fitems() {
+				let copystr="";
+				const pref=document.getElementById("item-sel-f-pref").value
+				const suff=document.getElementById("item-sel-f-suff").value
+				for (const item of selecteditems) { copystr+=pref+" "+item+" "+suff+";"; }
+				alert(copystr);
+			}
+
+			function clr_item_sel() {
+				document.querySelectorAll('td.selected').forEach(x => {x.classList.remove('selected'); });
+				selecteditems.clear();
+				document.getElementById('item-sel-btn').textContent="0 Items Selected"
+			}
+
+			function select_mode() {
+				const b=document.getElementById('item-sel-btn');
+				if (config.selectmode) {
+					config.selectmode=false;
+					b.textContent="Item Select Mode"
+					b.classList.remove("btn-grn");
+					document.getElementById("select-bar").style.display="none";
+					document.getElementById("item-table").removeEventListener('contextmenu', select_item);
+				}
+				else {
+					console.log(selecteditems);
+					config.selectmode=true;
+					b.textContent=selecteditems.size+" Items Selected"
+					b.classList.add("btn-grn");
+					document.getElementById("select-bar").style.display="block";
+					document.getElementById("item-table").addEventListener('contextmenu', select_item);
+				}
+			}
+
+			function select_item(event) {
+				const b=document.getElementById('item-sel-btn');
+				event.preventDefault();
+
+				const bgclasslist = event.target.parentElement.parentElement.classList;
+				const itemname = event.target.parentElement.href.replace(/.*\//,"").replace(/\..*/,"");
+
+				if (bgclasslist.contains('selected')) { bgclasslist.remove('selected'); selecteditems.delete(itemname); }
+				else { bgclasslist.add('selected'); selecteditems.add(itemname); }
+				b.textContent=selecteditems.size+" Items Selected"
+			}
+			document.getElementById("tag-search").addEventListener("keydown", function(event) { if (event.key === "Enter") {
+				config.tagsearch=document.getElementById("tag-search").value; load_thms(); }});
+		</script>
+		<script src="https://cdn.jsdelivr.net/npm/fzstd/umd/index.js"> </script>
+		<script>main();</script>
+	</body>
+</html>
+
