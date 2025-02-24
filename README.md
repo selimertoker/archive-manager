@@ -3,6 +3,7 @@
 ----------
 
 Manager script and frontend for viewing, adding/removing, checking, tagging, syncing image/video items.
+This script is written for bash, using another shell is not recommended.
 
 ----------
 
