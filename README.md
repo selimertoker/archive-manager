@@ -8,18 +8,18 @@ Manager script and web frontend for viewing, adding, removing, checking, tagging
 
 ## Usage:
 bash archive-manager.sh <option> [<args>]
-|option and args| what it does                                          |
-|C              | commit new items                                      |
-|R <item>       | remove an item                                        |
-|PL             | generate local item list                              |
-|PS <itemlist>  | tag local items or make patch for remote archive copy |
-|-softcheck     | check thumbnails filenames                            |
-|-hardcheck     | check item hashes                                     |
-|-thumbnailgen  | regenerate all thumbnails                             |
-|G <item> <tag> | tag an item                                           |
-|U <item>       | untag an item                                         |
-|F              | regenerate thm.tar.zst                                |
-|W              | start a web server                                    |
+| option and args | what it does                                          |
+| C               | commit new items                                      |
+| R <item>        | remove an item                                        |
+| PL              | generate local item list                              |
+| PS <itemlist>   | tag local items or make patch for remote archive copy |
+| -softcheck      | check thumbnails filenames                            |
+| -hardcheck      | check item hashes                                     |
+| -thumbnailgen   | regenerate all thumbnails                             |
+| G <item> <tag>  | tag an item                                           |
+| U <item>        | untag an item                                         |
+| F               | regenerate thm.tar.zst                                |
+| W               | start a web server                                    |
 
 ----------
 
