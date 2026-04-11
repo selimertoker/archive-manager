@@ -1,23 +1,25 @@
-# Archive manager v3.4.1
+# Archive manager v3.5.1
 
 ----------
 
-Manager script and frontend for viewing, adding/removing, checking, tagging, syncing image/video items.
-This script is written for bash, using another shell is not recommended.
+Manager script and web frontend for viewing, adding, removing, checking, tagging, and sharing image or video items.
 
 ----------
 
 ## Usage:
-Use -S                to sync new items
-Use -R <item>         to remove items
-Use -PL               to generate local item list
-Use -PS <itemlist>    to parse remote item list, tag local items, make patch for remote archive copy
-Use -SC               to softcheck, check thumbnails
-Use -HC               to hardcheck, check item hashes
-Use -T                to regenerate all thumbnails
-Use -G <item> <tag>   to tag an item
-Use -U <item>         to untag an item
-Use -F                to regenarate thm.tar.zst
+bash archive-manager.sh <option> [<args>]
+|option and args| what it does                                          |
+|C              | commit new items                                      |
+|R <item>       | remove an item                                        |
+|PL             | generate local item list                              |
+|PS <itemlist>  | tag local items or make patch for remote archive copy |
+|-softcheck     | check thumbnails filenames                            |
+|-hardcheck     | check item hashes                                     |
+|-thumbnailgen  | regenerate all thumbnails                             |
+|G <item> <tag> | tag an item                                           |
+|U <item>       | untag an item                                         |
+|F              | regenerate thm.tar.zst                                |
+|W              | start a web server                                    |
 
 ----------
 
@@ -27,36 +29,44 @@ img/
 ├── archive-manager.sh
 ├── index.html
 ├── sto/
-│   └── 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b-tag.png
+│   └── 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b-tag.jxl
 │       ...
 ├── thm/
-│   └── 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b-tag.jpg
+│   └── 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b-tag.webp
 │       ...
 ├── thm.tar.zst
 └── tmp/
 ```
 This file structure is called an *archive*.
-Because the item(s) in sto/ has .png extension, this is an image archive.
+Because the item(s) in sto/ has .jxl extension (an image format), this is an image archive.
 Video archives have the same file structure except the items in sto/ has .mp4 extension.
 Type of an archive can be either image or video, but not both.
 
-To sync (add) new items, place the files in tmp/ and run *archive-manager.sh -S*
+To commit (add) new items, place the files in tmp/ and run *archive-manager.sh C*
 
-Images are converted to PNG format when syncing.
-Videos are expected to be using h264, they are not synced otherwise.
-Thubnails are all JPG files.
+Images are converted to JXL format when committing.
+Videos are expected to be in MP4 format, they are not committed otherwise.
+Thumbnails are automatically created from these, and are all WEBP files.
 
-New files with names starting with "_" are set as tags, for example:
-tmp/_tag1-tag_2.qwe.asd.png will be synced as sto/01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b-tag1-tag_2.png
+Files under sto/ are the items, and are named as <sha256 hash>-<tags>.<file type>.
+Thumbnails are stored in thm/ and are named the same as the items, but the file type is WEBP.
+
+You can specify the tags when committing an item by setting the first character of its file name to underscore (_).
+For example,
+**tmp/_tag1-tag_2.qwe.asd** will be committed as **sto/01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b-tag1-tag_2.jxl**
 
 Never have spaces in tags, use "_" or "-"!
 
-The archive can have remote copies, and new items/tags can be applied on the remote copy with -PL/-PS flags.
-Itemlist generated on -PL flag can be opened with -PS flag, and tag differences can be resolved.
-A .tar file of new items can also be created for the remote copy to extract and sync.
+The archive can have remote copies, and new items/tags can be applied on the remote copy with **PL/PS** options.
+Person A can generate an itemlist file with the **PL** option.
+Person B can open this file with **PS** option and automatically do:
+1. tag and remove their items to match Person A's items,
+2. create a .tar file containing items that B has but A doesn't.
+Person A can extract this file into tmp/ and commit to obtain B's items.
 
-To view the archive properly, start your favorite http server and open index.html, where items can be sorted and searched.
-You can use the python http server if you installed python:
-```python -m http.server```
+To view the archive properly, start an http server and open main.html, where items can be sorted and searched.
+Option **W** opens the python web server if it is installed.
+
+The webpage detects the archive type from its path, and if *img* or *vid* is not a part of the path, type is asked.
 
 Designed to have minimal dependencies: *imagemagick*, *ffmpeg*, *sha256sum*.

@@ -10,12 +10,12 @@ echoprog() { echo -e  "  $*"; }
 
 archivetype=$(pwd)
 archivetype=${archivetype: -3:3}
-imgextnsn=png
+imgextnsn=jxl
 vidextnsn=mp4
 thmextnsn=webp
 
-yellow="\e[32m"
-white="\e[39m"
+COLORy="\e[32m"
+COLORw="\e[39m"
 
 if [[ "$archivetype" == img ]]; then
 	extension=$imgextnsn
@@ -23,7 +23,7 @@ if [[ "$archivetype" == img ]]; then
 		convert="magick"
 	else convert="convert"
 	fi
-	checkformat() { [[ $(file "$1") != *"PNG image data"* ]]; } # "JPEG XL"
+	checkformat() { [[ $(file "$1") != *"JPEG XL"* ]]; } # "PNG image data"
 	thmgen() { $convert "sto/$1.$extension" -quality 30 -resize 128x128 -strip "thm/$1.$thmextnsn" || echowarn "COULD NOT GENERATE THUMBNAIL"; }
 elif [[ "$archivetype" == vid ]]; then
 	extension=$vidextnsn
@@ -337,7 +337,7 @@ while :; do
 				done
 				echoprog "DONE CHECKING ITEMS"
 
-				if [[ -n "$corruptitems" ]] then
+				if [[ -n "$corruptitems" ]]; then
 					echoinfo "FOUND CORRUPT ITEMS: ${corruptitems[*]}"
 				else
 					echoinfo "ALL FILES ARE GOOD"
@@ -397,18 +397,18 @@ while :; do
 			break ;;
 
 		*)
-			echoinfo "Archive manager v3.4.1"
-			echoinfo "Use"	$yellow	"C"			$white	      "to commit new items"
-			echoinfo "Use"	$yellow	"R <item>"		$white	      "to remove an item"
-			echoinfo "Use"	$yellow	"PL"			$white	      "to generate local item list"
-			echoinfo "Use"	$yellow	"PS <itemlist>"		$white	      "to tag local items or make patch for remote archive copy"
-			echoinfo "Use"	$yellow	"-softcheck"		$white	      "to check thumbnails filenames"
-			echoinfo "Use"	$yellow	"-hardcheck"		$white	      "to check item hashes"
-			echoinfo "Use"	$yellow	"-thumbnailgen"		$white	      "to regenerate all thumbnails"
-			echoinfo "Use"	$yellow	"G <item> <tag>"	$white	      "to tag an item"
-			echoinfo "Use"	$yellow	"U"			$white	      "to untag an item"
-			echoinfo "Use"	$yellow	"F"			$white	      "to regenerate thm.tar.zst"
-			echoinfo "Use"	$yellow	"W"			$white	      "to start a web server"
+			echoinfo "Archive manager v3.5.1"
+			echoinfo "Use " $COLORy "C"			"$COLORw" " to commit new items"
+			echoinfo "Use " $COLORy "R <item>"		"$COLORw" " to remove an item"
+			echoinfo "Use " $COLORy "PL"			"$COLORw" " to generate local item list"
+			echoinfo "Use " $COLORy "PS <itemlist>"		"$COLORw" " to tag local items or make patch for remote archive copy"
+			echoinfo "Use " $COLORy "-softcheck"		"$COLORw" " to check thumbnails filenames"
+			echoinfo "Use " $COLORy "-hardcheck"		"$COLORw" " to check item hashes"
+			echoinfo "Use " $COLORy "-thumbnailgen"		"$COLORw" " to regenerate all thumbnails"
+			echoinfo "Use " $COLORy "G <item> <tag>"	"$COLORw" " to tag an item"
+			echoinfo "Use " $COLORy "U"			"$COLORw" " to untag an item"
+			echoinfo "Use " $COLORy "F"			"$COLORw" " to regenerate thm.tar.zst"
+			echoinfo "Use " $COLORy "W"			"$COLORw" " to start a web server"
 			break ;;
 	esac
 done
