@@ -9,6 +9,7 @@ Manager script and web frontend for viewing, adding, removing, checking, tagging
 ## Usage:
 bash archive-manager.sh <option> [<args>]
 | option and args | what it does                                          |
+|-----------------|-------------------------------------------------------|
 | C               | commit new items                                      |
 | R <item>        | remove an item                                        |
 | PL              | generate local item list                              |
